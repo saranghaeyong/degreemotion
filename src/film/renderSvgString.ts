@@ -1,4 +1,9 @@
 import {
+  buildHorizontalLatticePath,
+  buildSideGuillochePaths,
+  buildWatermarkRosettePetals,
+} from './certificateGeometry';
+import {
   REG_DIGITS,
   computeFittedBox,
   type FilmVisualState,
@@ -34,7 +39,6 @@ export function renderFilmSvgString(
   embeddedFontCss = '',
 ): string {
   const p10Box = computeFittedBox(sources.pdfPage10AspectRatio, 992, 740, 540, 588);
-  const certBox = computeFittedBox(sources.certificateAspectRatio, 1020, 1760, 540, 960);
 
   const camTransform = `translate(540 960) scale(${state.camScale.toFixed(5)}) translate(${(-state.camX).toFixed(2)} ${(-state.camY).toFixed(2)})`;
 
@@ -248,22 +252,125 @@ export function renderFilmSvgString(
       </g>`;
   }
 
-  // SCENE 5: Actual pass.jpg Certificate Reveal
+  // SCENE 5: Reconstructed CUSAT Degree Certificate Motion Graphics
   let certBlock = '';
-  if (state.certOpacity > 0.002 && state.certClipH > 0.5) {
-    const certificateBody = sources.certificateImageDataUrl
-      ? `
-        <image href="${escapeXml(sources.certificateImageDataUrl)}" x="${certBox.x}" y="${certBox.y}" width="${certBox.width}" height="${certBox.height}" preserveAspectRatio="xMidYMid meet" />
-        <rect x="${certBox.x}" y="${certBox.y}" width="${certBox.width}" height="${certBox.height}" fill="none" stroke="#D1D5DB" stroke-width="1.5" />`
-      : `
-        <rect x="${certBox.x}" y="${certBox.y}" width="${certBox.width}" height="${certBox.height}" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1.5" />
-        <text x="540" y="960" text-anchor="middle" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="24" font-weight="700">${escapeXml(CERTIFICATE_FACTS.university)}</text>`;
+  if (state.certOpacity > 0.002) {
+    const leftGuilloche = buildSideGuillochePaths(114, 354, 1566)
+      .map(
+        (d) =>
+          `<path d="${d}" fill="none" stroke="#5E926B" stroke-width="1.2" stroke-opacity="0.58" />`,
+      )
+      .join('');
+    const rightGuilloche = buildSideGuillochePaths(966, 354, 1566)
+      .map(
+        (d) =>
+          `<path d="${d}" fill="none" stroke="#7F6E8E" stroke-width="1.2" stroke-opacity="0.58" />`,
+      )
+      .join('');
+    const bottomLattice = [0, 1, 2, 3]
+      .map((i) =>
+        buildHorizontalLatticePath(172, 908, 1456 + i * 24, 5, 48, i * 0.9),
+      )
+      .map(
+        (d) =>
+          `<path d="${d}" fill="none" stroke="#8C968F" stroke-width="0.9" stroke-opacity="0.28" />`,
+      )
+      .join('');
+    const rosettePaths = buildWatermarkRosettePetals(540, 960, 172, 18);
+
+    const paperTransform = `translate(540 ${(960 + state.certPaperY).toFixed(2)}) scale(${state.certPaperScaleX.toFixed(4)} ${state.certPaperScaleY.toFixed(4)}) translate(-540 -960)`;
 
     certBlock = `
-      <g opacity="${state.certOpacity.toFixed(3)}" clip-path="url(#certMask)">
-        ${vectorElevationShadow(certBox.x, certBox.y, certBox.width, certBox.height, 4)}
-        <rect x="${certBox.x}" y="${certBox.y}" width="${certBox.width}" height="${certBox.height}" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.25" />
-        ${certificateBody}
+      <g opacity="${state.certOpacity.toFixed(3)}" transform="${paperTransform}">
+        <!-- Layered archival paper depth -->
+        ${vectorElevationShadow(70, 334, 940, 1253, 6)}
+        <rect x="82" y="346" width="940" height="1253" rx="6" fill="#E5E7EB" stroke="#D1D5DB" stroke-width="1" />
+        <rect x="76" y="340" width="940" height="1253" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" />
+
+        <!-- Certificate base sheet (exact 3:4 proportion of pass.jpg) -->
+        <rect x="70" y="334" width="940" height="1253" rx="5" fill="url(#certPaperBg)" stroke="#CFC8B8" stroke-width="1.5" />
+
+        <g clip-path="url(#certPaperClip)">
+          <!-- Security tint header & footer bands -->
+          <rect x="70" y="334" width="940" height="270" fill="url(#certSecurityTint)" opacity="0.24" />
+          <rect x="70" y="1428" width="940" height="159" fill="url(#certSecurityTint)" opacity="0.24" />
+          ${bottomLattice}
+
+          <!-- Subtle sheen light sweep -->
+          <rect x="${state.certSheenX.toFixed(1)}" y="334" width="260" height="1253" fill="url(#certSheenGrad)" transform="skewX(-14)" />
+
+          <!-- Borders, guilloche ribbons & ornamental frieze -->
+          <g clip-path="url(#certBorderMask)">
+            <rect x="84" y="348" width="912" height="1225" rx="3" fill="none" stroke="#BDB6A5" stroke-width="1" />
+            <rect x="156" y="608" width="768" height="808" rx="2" fill="none" stroke="#D6D0C0" stroke-width="1.1" />
+            ${leftGuilloche}
+            ${rightGuilloche}
+
+            <!-- Ornamental top arch flourishes framing the university crest zone -->
+            <path d="M 164 590 Q 340 426 540 426 Q 740 426 916 590" fill="none" stroke="#9C9585" stroke-width="1.4" stroke-opacity="0.65" />
+            <path d="M 184 598 Q 350 444 540 444 Q 730 444 896 598" fill="none" stroke="#9C9585" stroke-width="0.9" stroke-opacity="0.55" />
+            <path d="M 225 604 Q 370 534 540 534 Q 710 534 855 604" fill="none" stroke="#9C9585" stroke-width="1" stroke-opacity="0.55" />
+          </g>
+
+          <!-- Faint central geometric watermark -->
+          <g opacity="${(state.certWatermarkOpacity * 0.08).toFixed(3)}" stroke="#6B7280" fill="none">
+            <circle cx="540" cy="960" r="196" stroke-width="1.4" />
+            <circle cx="540" cy="960" r="168" stroke-width="1" stroke-dasharray="5 4" />
+            <circle cx="540" cy="960" r="76" stroke-width="1.2" />
+            <path d="${rosettePaths}" stroke-width="1.1" />
+          </g>
+
+          <!-- 1. Arched University Heading & Top Geometric Crest Frame -->
+          <g opacity="${state.certUniOpacity.toFixed(3)}" transform="translate(0 ${state.certUniY.toFixed(2)})">
+            <g transform="translate(540 398)" stroke="#6B7280" fill="none" stroke-width="1.3">
+              <circle cx="0" cy="0" r="24" />
+              <circle cx="0" cy="0" r="16" />
+              <path d="M -12 4 L 0 -10 L 12 4 Z" />
+              <line x1="-18" y1="28" x2="18" y2="28" />
+            </g>
+            <text fill="#1F2937" font-family="Playfair Display, serif" font-size="33" font-weight="700" letter-spacing="0.4">
+              <textPath href="#certUniArc" startOffset="50%" text-anchor="middle">${escapeXml(CERTIFICATE_FACTS.university)}</textPath>
+            </text>
+            <line x1="176" y1="608" x2="904" y2="608" stroke="#D1CBC0" stroke-width="1" />
+          </g>
+
+          <!-- 2. Register Number & Faculty of Technology -->
+          <g opacity="${state.certRegOpacity.toFixed(3)}" transform="translate(0 ${state.certRegY.toFixed(2)})">
+            <text x="176" y="654" fill="#374151" font-family="Playfair Display, serif" font-size="19" font-weight="700">Register Number : ${CERTIFICATE_FACTS.regNo}</text>
+            <text x="540" y="736" text-anchor="middle" fill="#1F2937" font-family="Playfair Display, serif" font-size="27" font-weight="700" letter-spacing="1.8">FACULTY OF TECHNOLOGY</text>
+          </g>
+
+          <!-- 3. Academic Council Citation & SARANG R N -->
+          <g opacity="${state.certNameOpacity.toFixed(3)}">
+            <text x="540" y="794" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="18.5" font-style="italic">The Academic Council of the ${escapeXml(CERTIFICATE_FACTS.university)}</text>
+            <text x="540" y="826" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="18.5" font-style="italic">hereby makes known that</text>
+            <g transform="translate(540 886) scale(${state.certNameScale.toFixed(4)}) translate(-540 -886)">
+              <text x="540" y="896" text-anchor="middle" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="36" font-weight="800" letter-spacing="2.4">${CERTIFICATE_FACTS.name}</text>
+            </g>
+          </g>
+
+          <!-- 4. Master of Computer Applications Degree Wording -->
+          <g opacity="${state.certDegreeOpacity.toFixed(3)}" transform="translate(0 ${state.certDegreeY.toFixed(2)})">
+            <text x="540" y="948" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="18.5" font-style="italic">has been awarded the Degree of</text>
+            <text x="540" y="1006" text-anchor="middle" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="25" font-weight="800" letter-spacing="1.1">MASTER OF COMPUTER APPLICATIONS</text>
+            <text x="540" y="1062" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="16.8" font-style="italic">He/She having undergone the prescribed course of study and having been certified by duly</text>
+            <text x="540" y="1092" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="16.8" font-style="italic">appointed examiners to be qualified to receive the same and placed by them in the</text>
+          </g>
+
+          <!-- 5. First Class Classification -->
+          <g opacity="${state.certClassOpacity.toFixed(3)}" transform="translate(540 1148) scale(${state.certClassScale.toFixed(4)}) translate(-540 -1148)">
+            <text x="540" y="1156" text-anchor="middle" fill="#171717" font-family="Playfair Display, serif" font-size="30" font-weight="700">${CERTIFICATE_FACTS.classification}</text>
+          </g>
+
+          <!-- 6. April 2026 Examination, 29 October 2026 Award Date & Kochi Location -->
+          <g opacity="${state.certDatesOpacity.toFixed(3)}" transform="translate(0 ${state.certDatesY.toFixed(2)})">
+            <text x="540" y="1204" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="18.5" font-style="italic">at the examination held in</text>
+            <text x="540" y="1256" text-anchor="middle" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="25" font-weight="800">${CERTIFICATE_FACTS.examination}</text>
+            <text x="540" y="1312" text-anchor="middle" fill="#374151" font-family="Playfair Display, serif" font-size="18.5" font-style="italic">Given under the seal of the University this day, ${CERTIFICATE_FACTS.awardDate}.</text>
+            <text x="176" y="1484" fill="#525252" font-family="Inter, sans-serif" font-size="15" font-weight="600">Kochi - 682 022</text>
+            <text x="176" y="1510" fill="#525252" font-family="Inter, sans-serif" font-size="15" font-weight="600">Kerala, India.</text>
+          </g>
+        </g>
       </g>`;
   }
 
@@ -276,6 +383,22 @@ export function renderFilmSvgString(
       <stop offset="65%" stop-color="#C62828" stop-opacity="0.05" />
       <stop offset="100%" stop-color="#C62828" stop-opacity="0" />
     </radialGradient>
+    <linearGradient id="certPaperBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCFBF7" />
+      <stop offset="55%" stop-color="#F8F6EE" />
+      <stop offset="100%" stop-color="#F2EFE4" />
+    </linearGradient>
+    <linearGradient id="certSecurityTint" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7BAE87" />
+      <stop offset="50%" stop-color="#E5E7EB" />
+      <stop offset="100%" stop-color="#9B8BA8" />
+    </linearGradient>
+    <linearGradient id="certSheenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.34" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <path id="certUniArc" d="M 150 546 Q 540 434 930 546" />
     <clipPath id="rosterClip">
       <rect x="88" y="322" width="904" height="1364" />
     </clipPath>
@@ -285,8 +408,11 @@ export function renderFilmSvgString(
     <clipPath id="p10Mask">
       <rect x="20" y="${state.p10ClipY.toFixed(1)}" width="1040" height="${state.p10ClipH.toFixed(1)}" />
     </clipPath>
-    <clipPath id="certMask">
-      <rect x="10" y="${state.certClipY.toFixed(1)}" width="1060" height="${state.certClipH.toFixed(1)}" />
+    <clipPath id="certPaperClip">
+      <rect x="70" y="334" width="940" height="1253" rx="5" />
+    </clipPath>
+    <clipPath id="certBorderMask">
+      <rect x="70" y="334" width="940" height="${state.certBorderH.toFixed(1)}" />
     </clipPath>
   </defs>
   <rect width="${FILM_WIDTH}" height="${FILM_HEIGHT}" fill="#FFFFFF" />

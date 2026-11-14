@@ -80,10 +80,26 @@ export interface FilmVisualState {
   dramaticNameScale: number;
   dramaticMetaOpacity: number;
 
-  // 5. Actual pass.jpg Certificate Reveal (24.00s – 32.00s)
+  // 5. Reconstructed CUSAT Degree Certificate Motion Graphics (24.00s – 32.00s)
   certOpacity: number;
-  certClipY: number;
-  certClipH: number;
+  certPaperScaleX: number;
+  certPaperScaleY: number;
+  certPaperY: number;
+  certBorderH: number;
+  certWatermarkOpacity: number;
+  certSheenX: number;
+  certUniOpacity: number;
+  certUniY: number;
+  certRegOpacity: number;
+  certRegY: number;
+  certNameOpacity: number;
+  certNameScale: number;
+  certDegreeOpacity: number;
+  certDegreeY: number;
+  certClassOpacity: number;
+  certClassScale: number;
+  certDatesOpacity: number;
+  certDatesY: number;
 }
 
 export function createInitialFilmState(): FilmVisualState {
@@ -128,8 +144,24 @@ export function createInitialFilmState(): FilmVisualState {
     dramaticMetaOpacity: 0,
 
     certOpacity: 0,
-    certClipY: 1680,
-    certClipH: 0,
+    certPaperScaleX: 0.9,
+    certPaperScaleY: 0.05,
+    certPaperY: 42,
+    certBorderH: 0,
+    certWatermarkOpacity: 0,
+    certSheenX: -320,
+    certUniOpacity: 0,
+    certUniY: 16,
+    certRegOpacity: 0,
+    certRegY: 14,
+    certNameOpacity: 0,
+    certNameScale: 0.94,
+    certDegreeOpacity: 0,
+    certDegreeY: 14,
+    certClassOpacity: 0,
+    certClassScale: 0.94,
+    certDatesOpacity: 0,
+    certDatesY: 12,
   };
 }
 
@@ -140,24 +172,9 @@ export function createFilmStateTimeline(
   onComplete?: () => void,
 ): gsap.core.Timeline {
   const p10Box = computeFittedBox(sources.pdfPage10AspectRatio, 992, 740, 540, 588);
-  const certBox = computeFittedBox(sources.certificateAspectRatio, 1020, 1760, 540, 960);
-
   // Focal coordinates on the actual Page 10 image for registration cell 24100218
   const p10RegFocusX = p10Box.x + sources.pdfPage10Focus.x * p10Box.width;
   const p10RegFocusY = p10Box.y + sources.pdfPage10Focus.y * p10Box.height;
-
-  // Focal coordinates on the actual uploaded certificate (pass.jpg)
-  const certUniX = certBox.x + sources.certificateFocalPoints.university.x * certBox.width;
-  const certUniY = certBox.y + sources.certificateFocalPoints.university.y * certBox.height;
-
-  const certNameX = certBox.x + sources.certificateFocalPoints.candidateName.x * certBox.width;
-  const certNameY = certBox.y + sources.certificateFocalPoints.candidateName.y * certBox.height;
-
-  const certDegX = certBox.x + sources.certificateFocalPoints.degreeTitle.x * certBox.width;
-  const certDegY = certBox.y + sources.certificateFocalPoints.degreeTitle.y * certBox.height;
-
-  const certClassX = certBox.x + sources.certificateFocalPoints.classification.x * certBox.width;
-  const certClassY = certBox.y + sources.certificateFocalPoints.classification.y * certBox.height;
 
   // 71-student scroll distance: row height = 54px, viewport window = 1364px (~25 rows visible)
   const rowCount = sources.students.length;
@@ -281,38 +298,89 @@ export function createFilmStateTimeline(
     .to(state, { dramaticOpacity: 0, duration: 0.42, ease: 'power2.inOut' }, 23.58);
 
   // ---------------------------------------------------------
-  // SCENE 5: ACTUAL pass.jpg CERTIFICATE REVEAL (24.00s – 32.00s)
+  // SCENE 5: RECONSTRUCTED CERTIFICATE PRESENTATION (24.00s – 32.00s)
   // ---------------------------------------------------------
-  tl.set(state, { camX: 540, camY: 960, camScale: 0.98, certOpacity: 1 }, 24.00)
+  tl.set(state, { camX: 540, camY: 960, camScale: 0.96, certOpacity: 1 }, 24.00)
     .to(
       state,
-      { certClipY: 220, certClipH: 1500, duration: 0.68, ease: 'power2.inOut' },
+      {
+        certPaperScaleX: 1,
+        certPaperScaleY: 1,
+        certPaperY: 0,
+        duration: 0.72,
+        ease: 'power3.out',
+      },
       24.02,
     )
     .to(
       state,
-      { camX: certUniX, camY: certUniY, camScale: 1.24, duration: 0.95, ease: 'power2.inOut' },
-      24.75,
+      { certBorderH: 1254, duration: 0.78, ease: 'power2.inOut' },
+      24.48,
     )
     .to(
       state,
-      { camX: certNameX, camY: certNameY, camScale: 1.32, duration: 0.95, ease: 'power2.inOut' },
-      25.95,
+      { certWatermarkOpacity: 1, duration: 0.65, ease: 'power2.out' },
+      24.65,
     )
     .to(
       state,
-      { camX: certDegX, camY: certDegY, camScale: 1.24, duration: 0.95, ease: 'power2.inOut' },
+      { certSheenX: 1220, duration: 1.1, ease: 'power2.inOut' },
+      24.68,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 640, camScale: 1.14, duration: 0.95, ease: 'power2.inOut' },
+      24.82,
+    )
+    .to(
+      state,
+      { certUniOpacity: 1, certUniY: 0, duration: 0.58, ease: 'power3.out' },
+      25.08,
+    )
+    .to(
+      state,
+      { certRegOpacity: 1, certRegY: 0, duration: 0.50, ease: 'power3.out' },
+      25.60,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 845, camScale: 1.18, duration: 0.95, ease: 'power2.inOut' },
+      26.05,
+    )
+    .to(
+      state,
+      { certNameOpacity: 1, certNameScale: 1, duration: 0.58, ease: 'power3.out' },
+      26.28,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 1030, camScale: 1.15, duration: 0.92, ease: 'power2.inOut' },
       27.20,
     )
     .to(
       state,
-      { camX: certClassX, camY: certClassY, camScale: 1.28, duration: 0.90, ease: 'power2.inOut' },
+      { certDegreeOpacity: 1, certDegreeY: 0, duration: 0.58, ease: 'power3.out' },
+      27.35,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 1205, camScale: 1.16, duration: 0.92, ease: 'power2.inOut' },
+      28.35,
+    )
+    .to(
+      state,
+      { certClassOpacity: 1, certClassScale: 1, duration: 0.54, ease: 'power3.out' },
       28.45,
     )
     .to(
       state,
-      { camX: 540, camY: 960, camScale: 1.05, duration: 1.05, ease: 'power2.inOut' },
-      29.65,
+      { certDatesOpacity: 1, certDatesY: 0, duration: 0.56, ease: 'power3.out' },
+      28.92,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 960, camScale: 1.02, duration: 1.05, ease: 'power2.inOut' },
+      29.75,
     )
     .to({}, { duration: 0.01 }, FILM_DURATION - 0.01);
 
