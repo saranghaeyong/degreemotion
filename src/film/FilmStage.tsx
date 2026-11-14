@@ -7,7 +7,6 @@ import {
 } from './certificateGeometry';
 import {
   REG_DIGITS,
-  computeFittedBox,
   createFilmStateTimeline,
   createInitialFilmState,
 } from './choreography';
@@ -44,16 +43,21 @@ export const FilmStage: React.FC<FilmStageProps> = ({
   const caretRef = useRef<SVGRectElement>(null);
   const digitRefs = useRef<(SVGTextElement | null)[]>([]);
 
-  // Scene 2: Complete 71-Student List
+  // Scene 2: Complete 71-Student List & Sarang FAILED Highlight
   const rosterGroupRef = useRef<SVGGElement>(null);
   const rosterScrollRef = useRef<SVGGElement>(null);
+  const rosterFailFillRef = useRef<SVGRectElement>(null);
+  const rosterFailBarRef = useRef<SVGRectElement>(null);
+  const rosterFailBadgeRef = useRef<SVGRectElement>(null);
+  const rosterFailBorderRef = useRef<SVGRectElement>(null);
 
-  // Scene 3: Page 10 — Failed Students
+  // Scene 3: Digitally Recreated Page 10 — Failed Students
   const p10GroupRef = useRef<SVGGElement>(null);
   const p10ClipRectRef = useRef<SVGRectElement>(null);
   const p10HeadingRectRef = useRef<SVGRectElement>(null);
   const p10RowFillRef = useRef<SVGRectElement>(null);
   const p10RowBarRef = useRef<SVGRectElement>(null);
+  const p10RegCellFillRef = useRef<SVGRectElement>(null);
   const p10RowBorderRef = useRef<SVGRectElement>(null);
   const p10RegBoxRef = useRef<SVGRectElement>(null);
   const p10DetailGroupRef = useRef<SVGGElement>(null);
@@ -82,11 +86,6 @@ export const FilmStage: React.FC<FilmStageProps> = ({
   const callbacksRef = useRef({ onTimeUpdate, onComplete });
   callbacksRef.current = { onTimeUpdate, onComplete };
 
-  const p10Box = useMemo(
-    () => computeFittedBox(sources.pdfPage10AspectRatio, 992, 740, 540, 588),
-    [sources.pdfPage10AspectRatio],
-  );
-
   const certArtwork = useMemo(
     () => ({
       leftGuilloche: buildSideGuillochePaths(114, 354, 1566),
@@ -98,19 +97,6 @@ export const FilmStage: React.FC<FilmStageProps> = ({
     }),
     [],
   );
-
-  const p10RowX = p10Box.x + p10Box.width * 0.01;
-  const p10RowY = p10Box.y + p10Box.height * 0.663;
-  const p10RowW = p10Box.width * 0.98;
-  const p10RowH = p10Box.height * 0.048;
-
-  const p10HeadingX = p10Box.x + p10Box.width * 0.445;
-  const p10HeadingY = p10Box.y + p10Box.height * 0.604;
-  const p10HeadingW = p10Box.width * 0.11;
-  const p10HeadingH = p10Box.height * 0.025;
-
-  const p10RegX = p10Box.x + p10Box.width * 0.036;
-  const p10RegW = p10Box.width * 0.09;
 
   useEffect(() => {
     const state = createInitialFilmState();
@@ -167,6 +153,21 @@ export const FilmStage: React.FC<FilmStageProps> = ({
           `translate(0 ${(-state.rosterScrollY).toFixed(2)})`,
         );
       }
+      const rosterHlOp = state.rosterFailHighlightOpacity.toFixed(3);
+      const rosterHlW = Math.min(state.rosterFailHighlightW, 904).toFixed(1);
+      if (rosterFailFillRef.current) {
+        rosterFailFillRef.current.setAttribute('width', rosterHlW);
+        rosterFailFillRef.current.setAttribute('opacity', rosterHlOp);
+      }
+      if (rosterFailBarRef.current) {
+        rosterFailBarRef.current.setAttribute('opacity', rosterHlOp);
+      }
+      if (rosterFailBadgeRef.current) {
+        rosterFailBadgeRef.current.setAttribute('opacity', rosterHlOp);
+      }
+      if (rosterFailBorderRef.current) {
+        rosterFailBorderRef.current.setAttribute('opacity', rosterHlOp);
+      }
 
       // Scene 3
       if (p10GroupRef.current) {
@@ -182,12 +183,15 @@ export const FilmStage: React.FC<FilmStageProps> = ({
       if (p10RowFillRef.current) {
         p10RowFillRef.current.setAttribute(
           'width',
-          Math.min(state.p10HighlightW, p10RowW).toFixed(1),
+          Math.min(state.p10HighlightW, 912).toFixed(1),
         );
         p10RowFillRef.current.setAttribute('opacity', state.p10HighlightOpacity.toFixed(3));
       }
       if (p10RowBarRef.current) {
         p10RowBarRef.current.setAttribute('opacity', state.p10HighlightOpacity.toFixed(3));
+      }
+      if (p10RegCellFillRef.current) {
+        p10RegCellFillRef.current.setAttribute('opacity', state.p10HighlightOpacity.toFixed(3));
       }
       if (p10RowBorderRef.current) {
         p10RowBorderRef.current.setAttribute('opacity', state.p10HighlightOpacity.toFixed(3));
@@ -304,7 +308,7 @@ export const FilmStage: React.FC<FilmStageProps> = ({
     return () => {
       tl.kill();
     };
-  }, [p10RowW, sources, timelineRef]);
+  }, [sources, timelineRef]);
 
   return (
     <svg
@@ -342,9 +346,6 @@ export const FilmStage: React.FC<FilmStageProps> = ({
         <path id="certUniArc" d="M 150 546 Q 540 434 930 546" />
         <clipPath id="rosterClip">
           <rect x="88" y="322" width="904" height="1364" />
-        </clipPath>
-        <clipPath id="p10DocClip">
-          <rect x={p10Box.x} y={p10Box.y} width={p10Box.width} height={p10Box.height} rx="6" />
         </clipPath>
         <clipPath id="p10Mask">
           <rect ref={p10ClipRectRef} x="20" y="960" width="1040" height="0" />
@@ -485,16 +486,64 @@ export const FilmStage: React.FC<FilmStageProps> = ({
                 const rowY = 364 + idx * 54;
                 const isTarget = student.regNo === '24100218';
                 const nameFill = isTarget ? '#171717' : '#16834A';
-                const statusText = isTarget ? '—' : 'PASSED';
-                const statusFill = isTarget ? '#525252' : '#16834A';
+                const statusText = isTarget ? 'FAILED' : 'PASSED';
+                const statusFill = isTarget ? '#C62828' : '#16834A';
 
                 return (
                   <g key={`${student.serial}-${student.regNo}`}>
-                    {isTarget && <rect x="88" y={rowY - 34} width="904" height="52" fill="#F3F4F6" />}
+                    {isTarget && (
+                      <>
+                        <rect x="88" y={rowY - 34} width="904" height="52" fill="#FEF2F2" />
+                        <rect
+                          ref={rosterFailFillRef}
+                          x="88"
+                          y={rowY - 34}
+                          width="0"
+                          height="52"
+                          fill="#C62828"
+                          fillOpacity="0.11"
+                          opacity="0"
+                        />
+                        <rect
+                          ref={rosterFailBarRef}
+                          x="88"
+                          y={rowY - 34}
+                          width="5"
+                          height="52"
+                          fill="#C62828"
+                          opacity="0"
+                        />
+                        <rect
+                          ref={rosterFailBadgeRef}
+                          x="898"
+                          y={rowY - 22}
+                          width="82"
+                          height="32"
+                          rx="4"
+                          fill="#C62828"
+                          fillOpacity="0.14"
+                          stroke="#C62828"
+                          strokeWidth="2"
+                          opacity="0"
+                        />
+                        <rect
+                          ref={rosterFailBorderRef}
+                          x="88"
+                          y={rowY - 34}
+                          width="904"
+                          height="52"
+                          rx="4"
+                          fill="none"
+                          stroke="#C62828"
+                          strokeWidth="2"
+                          opacity="0"
+                        />
+                      </>
+                    )}
                     <text
                       x="114"
                       y={rowY}
-                      fill="#525252"
+                      fill={isTarget ? '#171717' : '#525252'}
                       fontFamily="Inter, sans-serif"
                       fontSize="16"
                       fontWeight={isTarget ? '700' : '600'}
@@ -507,7 +556,7 @@ export const FilmStage: React.FC<FilmStageProps> = ({
                       fill={nameFill}
                       fontFamily="Manrope, Inter, sans-serif"
                       fontSize="18"
-                      fontWeight="700"
+                      fontWeight={isTarget ? '800' : '700'}
                     >
                       {student.name}
                     </text>
@@ -518,7 +567,7 @@ export const FilmStage: React.FC<FilmStageProps> = ({
                       fill="#171717"
                       fontFamily="Manrope, Inter, sans-serif"
                       fontSize="17"
-                      fontWeight="700"
+                      fontWeight={isTarget ? '800' : '700'}
                     >
                       {student.regNo}
                     </text>
@@ -528,9 +577,9 @@ export const FilmStage: React.FC<FilmStageProps> = ({
                       textAnchor="end"
                       fill={statusFill}
                       fontFamily="Inter, sans-serif"
-                      fontSize="13"
+                      fontSize={isTarget ? '14' : '13'}
                       fontWeight="800"
-                      letterSpacing="0.6"
+                      letterSpacing={isTarget ? '0.8' : '0.6'}
                     >
                       {statusText}
                     </text>
@@ -546,7 +595,7 @@ export const FilmStage: React.FC<FilmStageProps> = ({
           </text>
         </g>
 
-        {/* SCENE 3: FAILED STUDENTS — ORIGINAL PDF PAGE 10 */}
+        {/* SCENE 3: DIGITALLY RECREATED PAGE 10 — FAILED STUDENTS */}
         <g ref={p10GroupRef} opacity="0">
           <g clipPath="url(#p10Mask)">
             <text
@@ -561,85 +610,152 @@ export const FilmStage: React.FC<FilmStageProps> = ({
               {CUSAT_IDENTITY.university}
             </text>
             <text x="44" y="206" fill="#171717" fontFamily="Manrope, Inter, sans-serif" fontSize="26" fontWeight="800">
-              Original Report · Page 10 · Failed Students
+              Report · Page 10 · Failed Students
             </text>
             <rect
-              x={p10Box.x}
-              y={p10Box.y}
-              width={p10Box.width}
-              height={p10Box.height}
-              rx="6"
+              x="44"
+              y="232"
+              width="992"
+              height="726"
+              rx="8"
               fill="#FFFFFF"
               stroke="#D1D5DB"
               strokeWidth="1.5"
               filter="url(#docShadow)"
             />
-            {sources.pdfPage10DataUrl && (
-              <g clipPath="url(#p10DocClip)">
-                <image
-                  href={sources.pdfPage10DataUrl}
-                  x={p10Box.x}
-                  y={p10Box.y}
-                  width={p10Box.width}
-                  height={p10Box.height}
-                  preserveAspectRatio="xMidYMid meet"
-                />
-                <rect
-                  ref={p10HeadingRectRef}
-                  x={p10HeadingX}
-                  y={p10HeadingY}
-                  width={p10HeadingW}
-                  height={p10HeadingH}
-                  fill="#C62828"
-                  fillOpacity="0.14"
-                  stroke="#C62828"
-                  strokeWidth="1.5"
-                  opacity="0"
-                />
-                <rect
-                  ref={p10RowFillRef}
-                  x={p10RowX}
-                  y={p10RowY}
-                  width="0"
-                  height={p10RowH}
-                  fill="#C62828"
-                  fillOpacity="0.18"
-                  opacity="0"
-                />
-                <rect
-                  ref={p10RowBarRef}
-                  x={p10RowX}
-                  y={p10RowY}
-                  width="5"
-                  height={p10RowH}
-                  fill="#C62828"
-                  opacity="0"
-                />
-                <rect
-                  ref={p10RowBorderRef}
-                  x={p10RowX}
-                  y={p10RowY}
-                  width={p10RowW}
-                  height={p10RowH}
-                  fill="none"
-                  stroke="#C62828"
-                  strokeWidth="2"
-                  opacity="0"
-                />
-                <rect
-                  ref={p10RegBoxRef}
-                  x={p10RegX}
-                  y={p10RowY}
-                  width={p10RegW}
-                  height={p10RowH}
-                  fill="#C62828"
-                  fillOpacity="0.22"
-                  stroke="#C62828"
-                  strokeWidth="3"
-                  opacity="0"
-                />
-              </g>
-            )}
+
+            <text x="1004" y="268" textAnchor="end" fill="#525252" fontFamily="Inter, sans-serif" fontSize="13" fontWeight="600">
+              Page 10 of 10
+            </text>
+            <text x="540" y="302" textAnchor="middle" fill="#171717" fontFamily="Manrope, Inter, sans-serif" fontSize="22" fontWeight="800">
+              Cochin University of Science &amp; Technology
+            </text>
+            <text x="540" y="330" textAnchor="middle" fill="#525252" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">
+              Master of Computer Applications-(April-2026)-IV-REGULAR - Master of Computer Application-- - 75
+            </text>
+            <text x="540" y="356" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="15" fontWeight="700">
+              Detailed Tabulation Report
+            </text>
+            <line x1="84" y1="378" x2="996" y2="378" stroke="#E5E7EB" strokeWidth="1.2" />
+
+            <rect
+              ref={p10HeadingRectRef}
+              x="424"
+              y="388"
+              width="232"
+              height="40"
+              rx="4"
+              fill="#C62828"
+              fillOpacity="0.09"
+              stroke="#C62828"
+              strokeWidth="1.5"
+              opacity="0"
+            />
+            <text x="540" y="415" textAnchor="middle" fill="#C62828" fontFamily="Manrope, Inter, sans-serif" fontSize="21" fontWeight="800">
+              {PAGE10_FAILED_24100218.heading}
+            </text>
+
+            {/* Page 10 Failed Students Table */}
+            <rect x="84" y="442" width="912" height="66" fill="#F3F4F6" />
+            <rect
+              ref={p10RowFillRef}
+              x="84"
+              y="508"
+              width="0"
+              height="98"
+              fill="#C62828"
+              fillOpacity="0.11"
+              opacity="0"
+            />
+            <rect
+              ref={p10RowBarRef}
+              x="84"
+              y="508"
+              width="5"
+              height="98"
+              fill="#C62828"
+              opacity="0"
+            />
+            <rect
+              ref={p10RegCellFillRef}
+              x="134"
+              y="508"
+              width="122"
+              height="98"
+              fill="#C62828"
+              fillOpacity="0.14"
+              opacity="0"
+            />
+            <rect x="84" y="442" width="912" height="164" fill="none" stroke="#525252" strokeWidth="1.4" />
+            <line x1="84" y1="508" x2="996" y2="508" stroke="#525252" strokeWidth="1.3" />
+            <line x1="134" y1="442" x2="134" y2="606" stroke="#9CA3AF" strokeWidth="1.1" />
+            <line x1="256" y1="442" x2="256" y2="606" stroke="#9CA3AF" strokeWidth="1.1" />
+            <line x1="441" y1="442" x2="441" y2="606" stroke="#9CA3AF" strokeWidth="1.1" />
+            <line x1="626" y1="442" x2="626" y2="606" stroke="#9CA3AF" strokeWidth="1.1" />
+            <line x1="811" y1="442" x2="811" y2="606" stroke="#9CA3AF" strokeWidth="1.1" />
+
+            {/* Table Headers */}
+            <text x="109" y="481" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13" fontWeight="700">Sl no</text>
+            <text x="195" y="470" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13" fontWeight="700">Enrolment</text>
+            <text x="195" y="490" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13" fontWeight="700">Number</text>
+            <text x="348.5" y="470" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">(gpa-credits-totalmarks,</text>
+            <text x="348.5" y="490" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">Sem--1)</text>
+            <text x="533.5" y="470" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">(gpa-credits-totalmarks,</text>
+            <text x="533.5" y="490" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" font-weight="700">Sem--2)</text>
+            <text x="718.5" y="470" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">(gpa-credits-totalmarks,</text>
+            <text x="718.5" y="490" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">Sem--3)</text>
+            <text x="903.5" y="470" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">(gpa-credits-totalmarks,</text>
+            <text x="903.5" y="490" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="12.5" fontWeight="700">Sem--4)</text>
+
+            {/* Sole Failed Entry Row: 1 | 24100218 */}
+            <text x="109" y="563" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="16" fontWeight="700">1</text>
+            <text x="195" y="564" textAnchor="middle" fill="#C62828" fontFamily="Manrope, Inter, sans-serif" fontSize="19" fontWeight="800">
+              {PAGE10_FAILED_24100218.regNo}
+            </text>
+
+            <text x="348.5" y="549" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">(6.58 -24.00 -411.00 ,</text>
+            <text x="348.5" y="574" textAnchor="middle" fill="#525252" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">Sem--1)</text>
+
+            <text x="533.5" y="549" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">(7.00 -24.00 -452.00 ,</text>
+            <text x="533.5" y="574" textAnchor="middle" fill="#525252" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">Sem--2)</text>
+
+            <text x="718.5" y="549" textAnchor="middle" fill="#C62828" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="800">(0.00 -18.00 -380.00 ,</text>
+            <text x="718.5" y="574" textAnchor="middle" fill="#C62828" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="800">Sem--3)</text>
+
+            <text x="903.5" y="549" textAnchor="middle" fill="#171717" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">(10.00 -16.00 -360.00 ,</text>
+            <text x="903.5" y="574" textAnchor="middle" fill="#525252" fontFamily="Inter, sans-serif" fontSize="13.5" fontWeight="600">Sem--4)</text>
+
+            <rect
+              ref={p10RowBorderRef}
+              x="84"
+              y="508"
+              width="912"
+              height="98"
+              fill="none"
+              stroke="#C62828"
+              strokeWidth="2"
+              opacity="0"
+            />
+            <rect
+              ref={p10RegBoxRef}
+              x="134"
+              y="508"
+              width="122"
+              height="98"
+              fill="none"
+              stroke="#C62828"
+              strokeWidth="3"
+              opacity="0"
+            />
+
+            {/* Page 10 Exact Notes & Date */}
+            <text x="84" y="658" fill="#171717" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="700">Note :</text>
+            <text x="102" y="690" fill="#525252" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="500">{'•  * - Re - Examination Marks'}</text>
+            <text x="102" y="718" fill="#525252" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="500">{'•  **** - Not Applied for subject A - Absent'}</text>
+            <text x="102" y="746" fill="#525252" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="500">{'•  WH - WithHeld'}</text>
+            <text x="84" y="792" fill="#171717" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="600">Note: Marks = C.A + E.S + Moderation</text>
+            <text x="84" y="824" fill="#171717" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="700">Dated : Apr 29, 2026</text>
+            <text x="996" y="886" textAnchor="end" fill="#171717" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="700">Signature</text>
           </g>
 
           <g ref={p10DetailGroupRef} opacity="0">

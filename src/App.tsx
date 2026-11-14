@@ -798,7 +798,7 @@ export default function App() {
                 04. Complete Student Registry (Pages 1–8 · {sources.students.length} Students)
               </h2>
               <p className="mt-0.5 text-xs text-[#525252]">
-                Verbatim extraction from fail.pdf Pages 1–8. Other 70 students shown in green (#16834A); 24100218 SARANG R N kept unhighlighted.
+                Verbatim extraction from fail.pdf Pages 1–8. Other 70 students shown in green (#16834A); 24100218 SARANG R N marked FAILED in red (#C62828).
               </p>
             </div>
             <input
@@ -826,7 +826,7 @@ export default function App() {
                   return (
                     <tr
                       key={`${s.serial}-${s.regNo}`}
-                      className={isTarget ? 'bg-[#F3F4F6]' : 'hover:bg-[#F3F4F6]/60'}
+                      className={isTarget ? 'bg-[#FEF2F2]' : 'hover:bg-[#F3F4F6]/60'}
                     >
                       <td className="px-4 py-2.5 text-[#525252]">{s.serial}</td>
                       <td
@@ -841,10 +841,10 @@ export default function App() {
                       </td>
                       <td
                         className={`px-4 py-2.5 text-right font-bold ${
-                          isTarget ? 'text-[#525252]' : 'text-[#16834A]'
+                          isTarget ? 'text-[#C62828]' : 'text-[#16834A]'
                         }`}
                       >
-                        {isTarget ? '—' : 'PASSED'}
+                        {isTarget ? 'FAILED' : 'PASSED'}
                       </td>
                     </tr>
                   );

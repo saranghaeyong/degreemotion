@@ -5,7 +5,6 @@ import {
 } from './certificateGeometry';
 import {
   REG_DIGITS,
-  computeFittedBox,
   type FilmVisualState,
 } from './choreography';
 import {
@@ -38,23 +37,7 @@ export function renderFilmSvgString(
   sources: DocumentSources,
   embeddedFontCss = '',
 ): string {
-  const p10Box = computeFittedBox(sources.pdfPage10AspectRatio, 992, 740, 540, 588);
-
   const camTransform = `translate(540 960) scale(${state.camScale.toFixed(5)}) translate(${(-state.camX).toFixed(2)} ${(-state.camY).toFixed(2)})`;
-
-  // Exact Page 10 highlight boxes mapped directly onto the actual Page 10 PDF image
-  const p10RowX = p10Box.x + p10Box.width * 0.01;
-  const p10RowY = p10Box.y + p10Box.height * 0.663;
-  const p10RowW = p10Box.width * 0.98;
-  const p10RowH = p10Box.height * 0.048;
-
-  const p10HeadingX = p10Box.x + p10Box.width * 0.445;
-  const p10HeadingY = p10Box.y + p10Box.height * 0.604;
-  const p10HeadingW = p10Box.width * 0.11;
-  const p10HeadingH = p10Box.height * 0.025;
-
-  const p10RegX = p10Box.x + p10Box.width * 0.036;
-  const p10RegW = p10Box.width * 0.09;
 
   // SCENE 1: Search Interface & 24100218 Typing
   let searchBlock = '';
@@ -96,7 +79,7 @@ export function renderFilmSvgString(
       </g>`;
   }
 
-  // SCENE 2: Complete 71-Student List (other 70 in #16834A green; SARANG R N neutral, NOT green/PASSED)
+  // SCENE 2: Complete 71-Student List (other 70 in #16834A green; SARANG R N marked FAILED in #C62828 with animated highlight)
   let rosterBlock = '';
   if (state.rosterOpacity > 0.002) {
     const rowsHtml =
@@ -106,15 +89,31 @@ export function renderFilmSvgString(
               const rowY = 364 + idx * 54;
               const isTarget = student.regNo === '24100218';
               const nameFill = isTarget ? '#171717' : '#16834A';
-              const statusText = isTarget ? '—' : 'PASSED';
-              const statusFill = isTarget ? '#525252' : '#16834A';
+              const statusText = isTarget ? 'FAILED' : 'PASSED';
+              const statusFill = isTarget ? '#C62828' : '#16834A';
+              const hlOpacity = state.rosterFailHighlightOpacity;
+              const hlW = Math.min(state.rosterFailHighlightW, 904);
+
+              const targetHighlightSvg = isTarget
+                ? `
+                  <rect x="88" y="${rowY - 34}" width="904" height="52" fill="#FEF2F2" />
+                  ${
+                    hlOpacity > 0.002
+                      ? `
+                    <rect x="88" y="${rowY - 34}" width="${hlW.toFixed(1)}" height="52" fill="#C62828" fill-opacity="0.11" opacity="${hlOpacity.toFixed(3)}" />
+                    <rect x="88" y="${rowY - 34}" width="5" height="52" fill="#C62828" opacity="${hlOpacity.toFixed(3)}" />
+                    <rect x="898" y="${rowY - 22}" width="82" height="32" rx="4" fill="#C62828" fill-opacity="0.14" stroke="#C62828" stroke-width="2" opacity="${hlOpacity.toFixed(3)}" />
+                    <rect x="88" y="${rowY - 34}" width="904" height="52" rx="4" fill="none" stroke="#C62828" stroke-width="2" opacity="${hlOpacity.toFixed(3)}" />`
+                      : ''
+                  }`
+                : '';
 
               return `
-                ${isTarget ? `<rect x="88" y="${rowY - 34}" width="904" height="52" fill="#F3F4F6" />` : ''}
-                <text x="114" y="${rowY}" fill="#525252" font-family="Inter, sans-serif" font-size="16" font-weight="${isTarget ? '700' : '600'}">${student.serial}</text>
-                <text x="190" y="${rowY}" fill="${nameFill}" font-family="Manrope, Inter, sans-serif" font-size="18" font-weight="700">${escapeXml(student.name)}</text>
-                <text x="820" y="${rowY}" text-anchor="end" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="17" font-weight="700">${escapeXml(student.regNo)}</text>
-                <text x="968" y="${rowY}" text-anchor="end" fill="${statusFill}" font-family="Inter, sans-serif" font-size="13" font-weight="800" letter-spacing="0.6">${statusText}</text>
+                ${targetHighlightSvg}
+                <text x="114" y="${rowY}" fill="${isTarget ? '#171717' : '#525252'}" font-family="Inter, sans-serif" font-size="16" font-weight="${isTarget ? '700' : '600'}">${student.serial}</text>
+                <text x="190" y="${rowY}" fill="${nameFill}" font-family="Manrope, Inter, sans-serif" font-size="18" font-weight="${isTarget ? '800' : '700'}">${escapeXml(student.name)}</text>
+                <text x="820" y="${rowY}" text-anchor="end" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="17" font-weight="${isTarget ? '800' : '700'}">${escapeXml(student.regNo)}</text>
+                <text x="968" y="${rowY}" text-anchor="end" fill="${statusFill}" font-family="Inter, sans-serif" font-size="${isTarget ? '14' : '13'}" font-weight="800" letter-spacing="${isTarget ? '0.8' : '0.6'}">${statusText}</text>
                 <line x1="88" y1="${rowY + 17}" x2="992" y2="${rowY + 17}" stroke="#E5E7EB" stroke-width="1" />`;
             })
             .join('')
@@ -146,25 +145,90 @@ export function renderFilmSvgString(
       </g>`;
   }
 
-  // SCENE 3: Actual Page 10 — Failed Students
+  // SCENE 3: Digitally Recreated Page 10 — Failed Students (No raster screenshot)
   let p10Block = '';
   if (state.p10Opacity > 0.002 && state.p10ClipH > 0.5) {
-    const p10PageImage = sources.pdfPage10DataUrl
-      ? `
-        <g clip-path="url(#p10DocClip)">
-          <image href="${escapeXml(sources.pdfPage10DataUrl)}" x="${p10Box.x}" y="${p10Box.y}" width="${p10Box.width}" height="${p10Box.height}" preserveAspectRatio="xMidYMid meet" />
-          ${
-            state.p10HighlightOpacity > 0.002
-              ? `
-            <rect x="${p10HeadingX.toFixed(1)}" y="${p10HeadingY.toFixed(1)}" width="${p10HeadingW.toFixed(1)}" height="${p10HeadingH.toFixed(1)}" fill="#C62828" fill-opacity="0.14" stroke="#C62828" stroke-width="1.5" opacity="${state.p10HighlightOpacity.toFixed(3)}" />
-            <rect x="${p10RowX.toFixed(1)}" y="${p10RowY.toFixed(1)}" width="${Math.min(state.p10HighlightW, p10RowW).toFixed(1)}" height="${p10RowH.toFixed(1)}" fill="#C62828" fill-opacity="0.18" opacity="${state.p10HighlightOpacity.toFixed(3)}" />
-            <rect x="${p10RowX.toFixed(1)}" y="${p10RowY.toFixed(1)}" width="5" height="${p10RowH.toFixed(1)}" fill="#C62828" opacity="${state.p10HighlightOpacity.toFixed(3)}" />
-            <rect x="${p10RowX.toFixed(1)}" y="${p10RowY.toFixed(1)}" width="${p10RowW.toFixed(1)}" height="${p10RowH.toFixed(1)}" fill="none" stroke="#C62828" stroke-width="2" opacity="${state.p10HighlightOpacity.toFixed(3)}" />
-            <rect x="${p10RegX.toFixed(1)}" y="${p10RowY.toFixed(1)}" width="${p10RegW.toFixed(1)}" height="${p10RowH.toFixed(1)}" fill="#C62828" fill-opacity="0.22" stroke="#C62828" stroke-width="3" opacity="${state.p10HighlightOpacity.toFixed(3)}" />`
-              : ''
-          }
-        </g>`
-      : '';
+    const p10HlOp = state.p10HighlightOpacity;
+    const p10HlW = Math.min(state.p10HighlightW, 912);
+    const p10DigitalSheet = `
+      <g>
+        <text x="1004" y="268" text-anchor="end" fill="#525252" font-family="Inter, sans-serif" font-size="13" font-weight="600">Page 10 of 10</text>
+        <text x="540" y="302" text-anchor="middle" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="22" font-weight="800">Cochin University of Science &amp; Technology</text>
+        <text x="540" y="330" text-anchor="middle" fill="#525252" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">Master of Computer Applications-(April-2026)-IV-REGULAR - Master of Computer Application-- - 75</text>
+        <text x="540" y="356" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="15" font-weight="700">Detailed Tabulation Report</text>
+        <line x1="84" y1="378" x2="996" y2="378" stroke="#E5E7EB" stroke-width="1.2" />
+
+        ${
+          p10HlOp > 0.002
+            ? `<rect x="424" y="388" width="232" height="40" rx="4" fill="#C62828" fill-opacity="0.09" stroke="#C62828" stroke-width="1.5" opacity="${p10HlOp.toFixed(3)}" />`
+            : ''
+        }
+        <text x="540" y="415" text-anchor="middle" fill="#C62828" font-family="Manrope, Inter, sans-serif" font-size="21" font-weight="800">${PAGE10_FAILED_24100218.heading}</text>
+
+        <!-- Page 10 Failed Students Table -->
+        <rect x="84" y="442" width="912" height="66" fill="#F3F4F6" />
+        ${
+          p10HlOp > 0.002
+            ? `
+          <rect x="84" y="508" width="${p10HlW.toFixed(1)}" height="98" fill="#C62828" fill-opacity="0.11" opacity="${p10HlOp.toFixed(3)}" />
+          <rect x="84" y="508" width="5" height="98" fill="#C62828" opacity="${p10HlOp.toFixed(3)}" />
+          <rect x="134" y="508" width="122" height="98" fill="#C62828" fill-opacity="0.14" opacity="${p10HlOp.toFixed(3)}" />`
+            : ''
+        }
+        <rect x="84" y="442" width="912" height="164" fill="none" stroke="#525252" stroke-width="1.4" />
+        <line x1="84" y1="508" x2="996" y2="508" stroke="#525252" stroke-width="1.3" />
+        <line x1="134" y1="442" x2="134" y2="606" stroke="#9CA3AF" stroke-width="1.1" />
+        <line x1="256" y1="442" x2="256" y2="606" stroke="#9CA3AF" stroke-width="1.1" />
+        <line x1="441" y1="442" x2="441" y2="606" stroke="#9CA3AF" stroke-width="1.1" />
+        <line x1="626" y1="442" x2="626" y2="606" stroke="#9CA3AF" stroke-width="1.1" />
+        <line x1="811" y1="442" x2="811" y2="606" stroke="#9CA3AF" stroke-width="1.1" />
+
+        <!-- Table Headers -->
+        <text x="109" y="481" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13" font-weight="700">Sl no</text>
+        <text x="195" y="470" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13" font-weight="700">Enrolment</text>
+        <text x="195" y="490" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13" font-weight="700">Number</text>
+        <text x="348.5" y="470" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">(gpa-credits-totalmarks,</text>
+        <text x="348.5" y="490" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">Sem--1)</text>
+        <text x="533.5" y="470" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">(gpa-credits-totalmarks,</text>
+        <text x="533.5" y="490" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">Sem--2)</text>
+        <text x="718.5" y="470" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">(gpa-credits-totalmarks,</text>
+        <text x="718.5" y="490" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">Sem--3)</text>
+        <text x="903.5" y="470" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">(gpa-credits-totalmarks,</text>
+        <text x="903.5" y="490" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="12.5" font-weight="700">Sem--4)</text>
+
+        <!-- Sole Failed Entry Row: 1 | 24100218 -->
+        <text x="109" y="563" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="16" font-weight="700">1</text>
+        <text x="195" y="564" text-anchor="middle" fill="#C62828" font-family="Manrope, Inter, sans-serif" font-size="19" font-weight="800">${PAGE10_FAILED_24100218.regNo}</text>
+
+        <text x="348.5" y="549" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">(6.58 -24.00 -411.00 ,</text>
+        <text x="348.5" y="574" text-anchor="middle" fill="#525252" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">Sem--1)</text>
+
+        <text x="533.5" y="549" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">(7.00 -24.00 -452.00 ,</text>
+        <text x="533.5" y="574" text-anchor="middle" fill="#525252" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">Sem--2)</text>
+
+        <text x="718.5" y="549" text-anchor="middle" fill="#C62828" font-family="Inter, sans-serif" font-size="13.5" font-weight="800">(0.00 -18.00 -380.00 ,</text>
+        <text x="718.5" y="574" text-anchor="middle" fill="#C62828" font-family="Inter, sans-serif" font-size="13.5" font-weight="800">Sem--3)</text>
+
+        <text x="903.5" y="549" text-anchor="middle" fill="#171717" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">(10.00 -16.00 -360.00 ,</text>
+        <text x="903.5" y="574" text-anchor="middle" fill="#525252" font-family="Inter, sans-serif" font-size="13.5" font-weight="600">Sem--4)</text>
+
+        ${
+          p10HlOp > 0.002
+            ? `
+          <rect x="84" y="508" width="912" height="98" fill="none" stroke="#C62828" stroke-width="2" opacity="${p10HlOp.toFixed(3)}" />
+          <rect x="134" y="508" width="122" height="98" fill="none" stroke="#C62828" stroke-width="3" opacity="${p10HlOp.toFixed(3)}" />`
+            : ''
+        }
+
+        <!-- Page 10 Exact Notes & Date -->
+        <text x="84" y="658" fill="#171717" font-family="Inter, sans-serif" font-size="14" font-weight="700">Note :</text>
+        <text x="102" y="690" fill="#525252" font-family="Inter, sans-serif" font-size="14" font-weight="500">&#x2022;  * - Re - Examination Marks</text>
+        <text x="102" y="718" fill="#525252" font-family="Inter, sans-serif" font-size="14" font-weight="500">&#x2022;  **** - Not Applied for subject A - Absent</text>
+        <text x="102" y="746" fill="#525252" font-family="Inter, sans-serif" font-size="14" font-weight="500">&#x2022;  WH - WithHeld</text>
+        <text x="84" y="792" fill="#171717" font-family="Inter, sans-serif" font-size="14" font-weight="600">Note: Marks = C.A + E.S + Moderation</text>
+        <text x="84" y="824" fill="#171717" font-family="Inter, sans-serif" font-size="14" font-weight="700">Dated : Apr 29, 2026</text>
+        <text x="996" y="886" text-anchor="end" fill="#171717" font-family="Inter, sans-serif" font-size="14" font-weight="700">Signature</text>
+      </g>`;
 
     const detailCard =
       state.p10DetailOpacity > 0.002
@@ -208,10 +272,10 @@ export function renderFilmSvgString(
       <g opacity="${state.p10Opacity.toFixed(3)}">
         <g clip-path="url(#p10Mask)">
           <text x="44" y="168" fill="#2563EB" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="1.2">${escapeXml(CUSAT_IDENTITY.university)}</text>
-          <text x="44" y="206" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="26" font-weight="800">Original Report · Page 10 · Failed Students</text>
-          ${vectorElevationShadow(p10Box.x, p10Box.y, p10Box.width, p10Box.height, 6)}
-          <rect x="${p10Box.x}" y="${p10Box.y}" width="${p10Box.width}" height="${p10Box.height}" rx="6" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5" />
-          ${p10PageImage}
+          <text x="44" y="206" fill="#171717" font-family="Manrope, Inter, sans-serif" font-size="26" font-weight="800">Report · Page 10 · Failed Students</text>
+          ${vectorElevationShadow(44, 232, 992, 726, 8)}
+          <rect x="44" y="232" width="992" height="726" rx="8" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5" />
+          ${p10DigitalSheet}
         </g>
         ${detailCard}
       </g>`;
@@ -401,9 +465,6 @@ export function renderFilmSvgString(
     <path id="certUniArc" d="M 150 546 Q 540 434 930 546" />
     <clipPath id="rosterClip">
       <rect x="88" y="322" width="904" height="1364" />
-    </clipPath>
-    <clipPath id="p10DocClip">
-      <rect x="${p10Box.x}" y="${p10Box.y}" width="${p10Box.width}" height="${p10Box.height}" rx="6" />
     </clipPath>
     <clipPath id="p10Mask">
       <rect x="20" y="${state.p10ClipY.toFixed(1)}" width="1040" height="${state.p10ClipH.toFixed(1)}" />

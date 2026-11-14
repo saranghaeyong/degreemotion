@@ -57,9 +57,11 @@ export interface FilmVisualState {
   digit6Opacity: number;
   digit7Opacity: number;
 
-  // 2. Complete 71-Student List (3.50s – 13.50s)
+  // 2. Complete 71-Student List & Sarang FAILED Zoom (3.50s – 13.50s)
   rosterOpacity: number;
   rosterScrollY: number;
+  rosterFailHighlightOpacity: number;
+  rosterFailHighlightW: number;
 
   // 3. Original PDF Page 10 — Failed Students (13.50s – 19.20s)
   p10Opacity: number;
@@ -125,6 +127,8 @@ export function createInitialFilmState(): FilmVisualState {
 
     rosterOpacity: 0,
     rosterScrollY: 0,
+    rosterFailHighlightOpacity: 0,
+    rosterFailHighlightW: 0,
 
     p10Opacity: 0,
     p10ClipY: 960,
@@ -171,15 +175,20 @@ export function createFilmStateTimeline(
   onUpdate?: () => void,
   onComplete?: () => void,
 ): gsap.core.Timeline {
-  const p10Box = computeFittedBox(sources.pdfPage10AspectRatio, 992, 740, 540, 588);
-  // Focal coordinates on the actual Page 10 image for registration cell 24100218
-  const p10RegFocusX = p10Box.x + sources.pdfPage10Focus.x * p10Box.width;
-  const p10RegFocusY = p10Box.y + sources.pdfPage10Focus.y * p10Box.height;
+  // Focal coordinates on the recreated Page 10 Failed Students table for registration cell 24100218
+  const p10RegFocusX = 195;
+  const p10RegFocusY = 557;
 
   // 71-student scroll distance: row height = 54px, viewport window = 1364px (~25 rows visible)
   const rowCount = sources.students.length;
   const totalRosterHeight = rowCount * 54;
   const maxRosterScroll = Math.max(0, totalRosterHeight - 1310);
+  const sarangIdx = Math.max(
+    0,
+    sources.students.findIndex((s) => s.regNo === '24100218'),
+  );
+  const sarangRowY = 364 + sarangIdx * 54;
+  const sarangTargetScroll = Math.max(0, Math.min(maxRosterScroll, sarangRowY - 1004));
 
   const tl = gsap.timeline({
     paused: true,
@@ -206,19 +215,35 @@ export function createFilmStateTimeline(
     .to(state, { searchOpacity: 0, searchY: -28, duration: 0.34, ease: 'power2.in' }, 3.14);
 
   // ---------------------------------------------------------
-  // SCENE 2: COMPLETE 71-STUDENT LIST (3.50s – 13.50s)
+  // SCENE 2: COMPLETE 71-STUDENT LIST & SARANG FAILED ZOOM (3.50s – 13.50s)
   // ---------------------------------------------------------
   tl.set(state, { camX: 540, camY: 960, camScale: 1 }, 3.48)
     .to(state, { rosterOpacity: 1, duration: 0.45, ease: 'power2.out' }, 3.52)
     .to(
       state,
-      { rosterScrollY: maxRosterScroll, duration: 8.5, ease: 'none' },
-      4.15,
+      { rosterScrollY: maxRosterScroll, duration: 5.55, ease: 'none' },
+      4.05,
+    )
+    .to(
+      state,
+      { rosterScrollY: sarangTargetScroll, duration: 0.78, ease: 'power2.inOut' },
+      9.85,
+    )
+    .to(state, { rosterFailHighlightOpacity: 1, duration: 0.08 }, 10.55)
+    .to(
+      state,
+      { rosterFailHighlightW: 904, duration: 0.56, ease: 'power2.out' },
+      10.58,
+    )
+    .to(
+      state,
+      { camX: 540, camY: 975, camScale: 1.18, duration: 0.92, ease: 'power2.inOut' },
+      10.75,
     )
     .to(state, { rosterOpacity: 0, duration: 0.35, ease: 'power2.in' }, 13.15);
 
   // ---------------------------------------------------------
-  // SCENE 3: ACTUAL PDF PAGE 10 — FAILED STUDENTS (13.50s – 19.20s)
+  // SCENE 3: RECREATED PAGE 10 — FAILED STUDENTS (13.50s – 19.20s)
   // ---------------------------------------------------------
   tl.set(state, { camX: 540, camY: 960, camScale: 0.96, p10Opacity: 1 }, 13.50)
     .to(
@@ -232,7 +257,7 @@ export function createFilmStateTimeline(
       14.20,
     )
     .to(state, { p10HighlightOpacity: 1, duration: 0.06 }, 14.55)
-    .to(state, { p10HighlightW: p10Box.width * 0.98, duration: 0.58, ease: 'power2.out' }, 14.58)
+    .to(state, { p10HighlightW: 912, duration: 0.58, ease: 'power2.out' }, 14.58)
     .to(
       state,
       { p10DetailOpacity: 1, p10DetailY: 0, duration: 0.55, ease: 'power3.out' },
