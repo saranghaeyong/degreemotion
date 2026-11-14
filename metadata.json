@@ -1,0 +1,8 @@
+{
+  "name": "Archival Film 24100218",
+  "description": "1080x1920 editorial motion graphics sequence and 30 FPS MP4 renderer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

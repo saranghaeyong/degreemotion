@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-manrope: 'Manrope', system-ui, -apple-system, sans-serif;
+    --font-playfair: 'Playfair Display', Georgia, serif;
+  }
+
+  body {
+    font-family: var(--font-inter);
+    background-color: #ffffff;
+    color: #171717;
+  }
+}
+
+.font-inter {
+  font-family: var(--font-inter);
+}
+
+.font-manrope {
+  font-family: var(--font-manrope);
+}
+
+.font-playfair {
+  font-family: var(--font-playfair);
+}
